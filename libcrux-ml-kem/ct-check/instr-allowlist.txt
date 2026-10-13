@@ -1,0 +1,37 @@
+# Variable-latency instructions that are known to operate on PUBLIC data.
+#
+# Format:  category | symbol substring | why the operands are public
+#
+# `category` is a mnemonic as the scan reports it (`non-doit:popcnt`), `div-libcall`, or `*` for
+# any non-DOIT instruction. Use `*` only for code that never sees libcrux-ml-kem's data at all.
+#
+# Each line is a security claim. A hit is only safe if the *operands* cannot depend on secret
+# data; the scanner sees instructions, not dataflow, so it cannot check that for you. Before
+# adding a line, read the source and convince yourself, then say here what convinced you.
+#
+# Symbols are v0 mangling as llvm-objdump demangles it, which is what scan-instrs.py pins the
+# builds to. Copy the symbol from a FAIL report rather than writing it out. An entry that stops
+# matching fails the scan, so the list cannot quietly go stale.
+#
+# Do not add an entry whose pattern covers a function that touches secrets, even if the one hit
+# in it today is public: it would hide the next one. `--selftest` enforces this for the symbols in
+# ALLOWLIST_MUST_NOT_COVER in scan-instrs.py. Change the source instead.
+
+# CPU feature detection (CPUID, XGETBV, and the XCHG that saves RBX around CPUID). Runs once and
+# reads only the CPU's identification registers.
+* | libcrux_platform::x86::init::init_slow | CPU identification, no inputs
+non-doit:xgetbv | core::core_arch::x86::xsave::_xgetbv | CPU identification, no inputs
+
+# `rand`'s floating-point uniform distribution. Compiled into the rand rlib that libcrux-ml-kem's
+# `rand` feature pulls in, but libcrux-ml-kem never calls it: it only draws bytes.
+* | rand::distr::uniform::float::UniformFloat | float distribution code libcrux-ml-kem never calls
+
+# cSHAKE's `zero_bytes` encodes a length (`leading_zeros` on it becomes BSR or LZCNT). ML-KEM does
+# not use cSHAKE at all; the length would be public if it did.
+non-doit:bsr | libcrux_sha3::portable::incremental::cshake::zero_bytes | encodes a length
+non-doit:lzcnt | libcrux_sha3::portable::incremental::cshake::zero_bytes | encodes a length
+
+# The out-of-line `_mm256_set_epi8` that baseline builds call. Its only callers in libcrux-ml-kem
+# (vector/avx2/serialize.rs:217, 505, 604, 754 and vector/avx2/ntt.rs:143, 194) pass constant
+# shuffle masks; libcrux-sha3 does not call it.
+* | core::core_arch::x86::avx::_mm256_set_epi8 | every caller passes constant shuffle masks

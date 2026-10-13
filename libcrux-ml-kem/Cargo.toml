@@ -16,6 +16,8 @@ exclude = [
     "/hax.py",
     "C-CODE.md",
     "TOOLS.md",
+    "/ct-check",
+    "/ct-check.sh",
 ]
 
 [lib]

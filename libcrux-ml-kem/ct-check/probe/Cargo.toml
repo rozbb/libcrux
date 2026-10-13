@@ -1,0 +1,16 @@
+[package]
+name = "ct-scan-probe"
+version = "0.0.0"
+edition = "2021"
+publish = false
+description = "Instantiates every libcrux-ml-kem operation so the instruction scanner has code to disassemble"
+
+# Its own workspace, so it needs no entry in the libcrux workspace. libcrux commits no Cargo.lock,
+# so this resolves its own (git-ignored); the libcrux crates themselves are path dependencies.
+[workspace]
+
+[lib]
+crate-type = ["rlib"]
+
+[dependencies]
+libcrux-ml-kem = { path = "../.." }
